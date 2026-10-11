@@ -52,5 +52,8 @@ await check('allowed to update but not to read back: nothing changes', () => ali
 // .select().single() on a blocked row: PostgREST says it out loud (PGRST116, 0 rows).
 await check("alice renames bob's note with .select().single()", () => alice.from('notes').update({ title: 'hacked' }).eq('owner', 'bob').select('id').single(), 'NotSaved: no-rows')
 
+// WITH CHECK is different: the row is found, so the change is refused out loud.
+await check('WITH CHECK refuses the new value: a real error, not silence', () => alice.from('checked').update({ title: 'bad' }).eq('id', 1).select('id'), 'NotSaved: error')
+
 console.log(fails ? `\n${fails} FAILED` : '\nall good')
 process.exit(fails ? 1 : 0)

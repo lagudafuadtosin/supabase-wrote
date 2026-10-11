@@ -9,7 +9,9 @@ if [ ! -x /usr/local/bin/postgrest ]; then
   curl -sSL "https://github.com/PostgREST/postgrest/releases/download/$ver/postgrest-$ver-linux-static-x64.tar.xz" | tar -xJ -C /usr/local/bin
 fi
 service postgresql start >/dev/null
-su postgres -c "psql -q -c 'drop database if exists wrote_live'" 
+# Stop the old server first: Postgres will not drop a database that still has connections.
+pkill -x postgrest || true
+su postgres -c "psql -q -c 'drop database if exists wrote_live with (force)'" 
 for r in authenticator authenticated anon; do su postgres -c "psql -q -c 'drop role if exists $r'" 2>/dev/null || true; done
 su postgres -c "psql -q -c 'create database wrote_live'"
 su postgres -c "psql -q -d wrote_live -f $here/setup.sql"

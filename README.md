@@ -142,6 +142,9 @@ PostgREST 13 can refuse an update or delete that touches **more** rows than you 
 | table with no grant | 403, permission denied | `error` |
 | allowed to update, not allowed to read | 200, empty list, **and nothing changed** | `no-rows` |
 | blocked row with `.select().single()` | 406, PGRST116, 0 rows | `no-rows` |
+| row found, but `WITH CHECK` refuses the new value | 403, new row violates row-level security policy | `error` |
+
+So `USING` and `WITH CHECK` behave differently. When `USING` hides the row, the update is silent. When the row is found but `WITH CHECK` refuses the new value, Postgres raises an error. Only the silent kind needs this package, but `wrote()` reports both.
 
 The "allowed to update, not allowed to read" row answers a fair worry: could it be a false alarm? No. Postgres needs read rights to find the row before it can update it, so nothing changes and the empty list is the truth. `policies.sql` flags that same table before anyone hits it.
 

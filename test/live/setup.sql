@@ -28,3 +28,11 @@ create table public.locked (id serial primary key, body text);
 insert into public.notes (owner, title) values ('alice', 'alice note'), ('bob', 'bob note');
 insert into public.drafts (body) values ('first draft');
 insert into public.locked (body) values ('locked row');
+
+-- checked: you may find and change any row, but WITH CHECK refuses a title of 'bad'.
+create table public.checked (id serial primary key, title text);
+alter table public.checked enable row level security;
+create policy read_any on public.checked for select to authenticated using (true);
+create policy change_unless_bad on public.checked for update to authenticated using (true) with check (title <> 'bad');
+grant select, update on public.checked to authenticated;
+insert into public.checked (title) values ('good');
