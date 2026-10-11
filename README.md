@@ -7,7 +7,7 @@ When row level security blocks an **update** or **delete**, Postgres does not re
 `supabase-wrote` gives you three things:
 
 1. **`wrote()`**: turns the silent case into an error you can catch, at the moment of saving.
-2. **The finder**: a command that lists every update and delete in your code that cannot tell whether it saved. It fails CI on new ones.
+2. **The finder**: a command that lists every update and delete in your code that cannot tell whether it saved. With a committed baseline, it fails CI only on new ones.
 3. **`policies.sql`**: a read-only check that lists every table where updates or deletes will silently do nothing, and which policy is missing.
 
 ## 1. The helper
@@ -95,6 +95,17 @@ await supabase
   .update({ read_at: now }) // wrote-ok: nothing unread is fine
   .is('read_at', null)
 ```
+
+### In CI, on a project that already has some
+
+On an existing app the finder will find writes on day one. Rather than fix them all before CI can go green, save what is there now as a baseline and commit it:
+
+```sh
+npx supabase-wrote find . --save-baseline
+git add .supabase-wrote-baseline.json
+```
+
+From then on `npx supabase-wrote find .` fails only on writes the baseline does not list. Writes are matched by file and line of code, not line number, so code moving up or down does not set it off, and the same line twice counts twice. When you fix one, the run tells you, and `--save-baseline` again drops it. `--no-baseline` lists everything, and `--baseline <file>` keeps the file somewhere else.
 
 ## 3. Why did it not save? `policies.sql`
 

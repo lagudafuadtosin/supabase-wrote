@@ -187,12 +187,17 @@ function findPython(text) {
   return found
 }
 
-/** Every unchecked write under dir. */
+/** Every unchecked write under dir, each with its line of code for a baseline. */
 export function findInDir(dir) {
   const out = []
   for (const file of sourceFiles(dir)) {
     const lang = languageOf(file)
-    for (const hit of findInText(readFileSync(file, 'utf8'), lang)) out.push({ file: relative(dir, file) || file, ...hit })
+    const text = readFileSync(file, 'utf8')
+    const lines = text.split(/\r?\n/)
+    for (const hit of findInText(text, lang)) {
+      const code = (lines[hit.line - 1] ?? '').trim().replace(/\s+/g, ' ')
+      out.push({ file: relative(dir, file) || file, ...hit, code })
+    }
   }
   return out
 }
