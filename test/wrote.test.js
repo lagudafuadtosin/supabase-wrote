@@ -44,3 +44,13 @@ test('saved() awaits the query and checks it', async () => {
   assert.deepEqual(await saved(Promise.resolve({ data: [{ id: 2 }], error: null })), [{ id: 2 }])
   await assert.rejects(saved(Promise.resolve({ data: [], error: null })), (e) => e.reason === 'no-rows')
 })
+
+test('.select().single() on zero rows (PGRST116, 0 rows) is no-rows, not a database error', () => {
+  const error = { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned', details: 'The result contains 0 rows' }
+  assert.throws(() => wrote({ data: null, error }), (e) => e.reason === 'no-rows' && e.cause === error)
+})
+
+test('.single() on more than one row stays an error', () => {
+  const error = { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned', details: 'The result contains 2 rows' }
+  assert.throws(() => wrote({ data: null, error }), (e) => e.reason === 'error')
+})

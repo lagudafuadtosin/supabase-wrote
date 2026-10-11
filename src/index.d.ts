@@ -1,4 +1,4 @@
-export type WriteResult<T> = { data: T[] | T | null; error: { message: string } | null }
+export type WriteResult<T> = { data: T[] | T | null; error: { message: string; code?: string; details?: string } | null }
 
 /** Why a write did not save. */
 export declare class NotSaved extends Error {

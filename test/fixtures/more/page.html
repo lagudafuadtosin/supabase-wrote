@@ -1,0 +1,6 @@
+<script type="module">
+  // Unchecked, inside an HTML page. Line 3.
+  await supabase.from('bids').update({ awarded: true }).eq('id', bidId)
+  // Checked.
+  await supabase.from('bids').update({ seen: true }).eq('id', bidId).select('id')
+</script>

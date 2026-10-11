@@ -1,0 +1,4 @@
+1|public.no_read|authenticated|Every DELETE
+1|public.no_read|authenticated|Every UPDATE
+1|public.public_policy|anon|Every UPDATE
+2|public.no_policy|authenticated|authenticated is granted UPDATE

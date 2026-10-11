@@ -27,3 +27,40 @@ test('a chain that ends with .select() on the next line is fine', () => {
 test('comments with brackets inside the chain do not break it', () => {
   assert.deepEqual(findInText("supabase.from('a').update({ x: 1 }) /* (note) */ .eq('id', 1).select('id')"), [])
 })
+
+test('"// wrote-ok" on the line above skips a write where zero rows is expected', () => {
+  const src = "// wrote-ok: nothing unread is fine\nawait supabase.from('messages').update({ read: true }).is('read', null)"
+  assert.deepEqual(findInText(src), [])
+})
+
+test('"// wrote-ok" at the end of the line also skips it', () => {
+  assert.deepEqual(findInText("await supabase.from('coaches').update({ terms_at: now }).is('terms_at', null) // wrote-ok"), [])
+})
+
+test('"// wrote-ok" inside a multi-line chain skips it', () => {
+  assert.deepEqual(findInText("await supabase\n  .from('a')\n  .update({ x: 1 }) // wrote-ok, set once\n  .is('x', null)"), [])
+})
+
+test('a wrote-ok two lines up does not skip the next write', () => {
+  const src = "// wrote-ok\nconst a = 1\nawait supabase.from('a').update({ x: 1 }).eq('id', 1)"
+  assert.equal(findInText(src).length, 1)
+})
+
+const more = fileURLToPath(new URL('./fixtures/more/', import.meta.url))
+const hitsIn = (name) => findInDir(more).filter((h) => h.file === name).map((h) => `${h.line} ${h.kind}`)
+
+test('HTML pages are read too', () => {
+  assert.deepEqual(hitsIn('page.html'), ['3 update'])
+})
+
+test('plain fetch() PATCH or DELETE to /rest/v1 with no rows or count back is found, others are not', () => {
+  assert.deepEqual(hitsIn('worker.ts'), ['2 fetch PATCH'])
+})
+
+test('Dart (Flutter) uses the same rule', () => {
+  assert.deepEqual(hitsIn('notes.dart'), ['3 update'])
+})
+
+test('Python: a result thrown away or returning minimal is found, kept results and wrote-ok are not', () => {
+  assert.deepEqual(hitsIn('notes.py'), ['2 update', '18 update'])
+})

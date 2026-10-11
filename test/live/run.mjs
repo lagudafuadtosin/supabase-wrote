@@ -49,5 +49,8 @@ await check('a table with no grant at all', () => alice.from('locked').update({ 
 // false alarm. (Checked in psql after the run: the draft still says "first draft".)
 await check('allowed to update but not to read back: nothing changes', () => alice.from('drafts').update({ body: 'edited' }).eq('id', 1).select('id'), 'NotSaved: no-rows')
 
+// .select().single() on a blocked row: PostgREST says it out loud (PGRST116, 0 rows).
+await check("alice renames bob's note with .select().single()", () => alice.from('notes').update({ title: 'hacked' }).eq('owner', 'bob').select('id').single(), 'NotSaved: no-rows')
+
 console.log(fails ? `\n${fails} FAILED` : '\nall good')
 process.exit(fails ? 1 : 0)

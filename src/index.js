@@ -61,6 +61,17 @@ const label = (what) => (what ? ` (${what})` : '')
  */
 export function wrote(result, what) {
   const { data, error } = result ?? {}
+  // .select().single() on zero rows: PostgREST answers PGRST116 "0 rows". That is
+  // the same silent refusal, said out loud, so it gets the same reason.
+  if (error && error.code === 'PGRST116' && /\b0 rows\b/.test(`${error.details ?? ''} ${error.message ?? ''}`)) {
+    return fail(
+      new NotSaved(
+        'no-rows',
+        `Nothing was saved${label(what)}: no row matched. Row level security blocked it, or the row does not exist.`,
+        error,
+      ),
+    )
+  }
   if (error) return fail(new NotSaved('error', `Not saved${label(what)}: ${error.message}`, error))
   if (data === null || data === undefined) {
     return fail(
