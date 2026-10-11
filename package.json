@@ -1,6 +1,6 @@
 {
   "name": "supabase-wrote",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Know when a Supabase update or delete did not save, and why. Row level security blocks them silently: 200, no error, nothing changed.",
   "type": "module",
   "exports": {

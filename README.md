@@ -124,6 +124,25 @@ final rows = await supabase.from('notes').update({'title': title}).eq('id', id).
 if (rows.isEmpty) throw Exception('Nothing was saved: row level security blocked it, or the row does not exist');
 ```
 
+## Testing your own saves
+
+The service_role key skips row security, so a test that saves with it always passes and can never catch a blocked write. Use it for setup and cleanup only, and run the save under test as a real signed-in user. Then test the other way round too: another user tries to change the row, and the test expects the refusal.
+
+```ts
+import { wrote, NotSaved } from 'supabase-wrote'
+
+// admin = service_role client, for setup only. alice and bob = clients signed in as each user.
+const { data: note } = await admin.from('notes').insert({ owner: aliceId, title: 'a' }).select('id').single()
+
+// Alice can change her own note.
+wrote(await alice.from('notes').update({ title: 'b' }).eq('id', note.id).select('id'))
+
+// Bob cannot, and nothing changed.
+await assert.rejects(async () => wrote(await bob.from('notes').update({ title: 'x' }).eq('id', note.id).select('id')), NotSaved)
+const { data: after } = await admin.from('notes').select('title').eq('id', note.id).single()
+assert.equal(after.title, 'b')
+```
+
 ## What about `maxAffected()`?
 
 PostgREST 13 can refuse an update or delete that touches **more** rows than you allow (`.maxAffected(n)` in `supabase-js`, `Prefer: max-affected` with `handling=strict`). That guards the top, not the bottom: zero rows still passes. Use both if you want both ends covered.
