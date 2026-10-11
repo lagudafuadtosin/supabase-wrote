@@ -118,6 +118,8 @@ The most common cause is a table where a policy allows the update, but **no poli
 
 Each row comes with the line to fix it. Nothing is run for you. `service_role` skips row level security, so it is never affected and not listed.
 
+A SELECT policy that exists but does not match the row has the same effect. With `using (auth.uid() = user_id)` for SELECT, an update on another user's row finds nothing, even when the UPDATE policy allows it. `policies.sql` cannot see this, because it depends on the row, but `wrote()` reports it as `no-rows` when it happens.
+
 ## Other languages
 
 The same check, without the package:
