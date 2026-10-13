@@ -87,6 +87,8 @@ What it reads:
 
 It skips `node_modules`, build folders and virtual environments, and exits with code 1 when it finds something, so it can guard CI. It is a quick text scan, not a full parser.
 
+Upserts are not listed. On the ON CONFLICT DO UPDATE path Postgres raises an error when the existing row fails the UPDATE policy's USING check, so an upsert either saves or throws ([Postgres docs, CREATE POLICY](https://www.postgresql.org/docs/current/sql-createpolicy.html), UPDATE section).
+
 Some writes are meant to change nothing sometimes: marking messages as read when none are unread, or setting a value only once. Mark those with a `wrote-ok` comment (`//` or `#`) on the line above, on the same line, or inside the chain, and the finder skips them:
 
 ```ts

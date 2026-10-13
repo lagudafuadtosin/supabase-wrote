@@ -64,3 +64,10 @@ test('Dart (Flutter) uses the same rule', () => {
 test('Python: a result thrown away or returning minimal is found, kept results and wrote-ok are not', () => {
   assert.deepEqual(hitsIn('notes.py'), ['2 update', '18 update'])
 })
+
+test('upserts are left out: Postgres throws when the existing row fails the UPDATE policy, so they are never silent', () => {
+  assert.deepEqual(findInText("await supabase.from('a').upsert({ id: 1, x: 1 })"), [])
+  assert.deepEqual(findInText("await supabase.from('a').upsert({ id: 1, x: 1 }, { onConflict: 'id' }).eq('id', 1)"), [])
+  assert.deepEqual(findInText("fetch('https://x.supabase.co/rest/v1/a', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' }, body })"), [])
+  assert.deepEqual(findInText("supabase.table('a').upsert({'id': 1, 'x': 1}).execute()"), [])
+})
