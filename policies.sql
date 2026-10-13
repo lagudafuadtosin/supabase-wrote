@@ -51,7 +51,8 @@ applies as (
 checks as (
   select t.name,
          a.role,
-         has_table_privilege(a.role, t.oid, 'UPDATE') as granted_update,
+         -- any-column, because a grant on single columns is enough to update through the API
+         has_any_column_privilege(a.role, t.oid, 'UPDATE') as granted_update,
          has_table_privilege(a.role, t.oid, 'DELETE') as granted_delete,
          coalesce(a.can_select, false) as can_select,
          coalesce(a.can_update, false) as can_update,

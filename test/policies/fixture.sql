@@ -30,3 +30,8 @@ grant update on public.public_policy to anon;
 
 create table public.no_rls (id int primary key);           -- row level security off: not this check's business
 grant select, update on public.no_rls to anon;
+
+create table public.column_grant (id int primary key, bio text);  -- update granted on one column only, no select policy: level 1
+alter table public.column_grant enable row level security;
+create policy w on public.column_grant for update to authenticated using (true);
+grant update (bio) on public.column_grant to authenticated;

@@ -1,3 +1,4 @@
+1|public.column_grant|authenticated|Every UPDATE
 1|public.no_read|authenticated|Every DELETE
 1|public.no_read|authenticated|Every UPDATE
 1|public.public_policy|anon|Every UPDATE
