@@ -37,9 +37,11 @@ await saved(supabase.from('notes').delete().eq('id', id).select('id'), 'delete n
 
 | reason | what happened |
 |---|---|
-| `no-rows` | No row matched, so nothing changed. Row level security blocked it, or the row does not exist. |
+| `no-rows` | No row matched, so nothing changed. Row level security blocked it, the row does not exist, or another filter in the query did not match, like a version check. |
 | `error` | The database refused it. The original error is on `err.cause`. |
 | `unchecked` | The query did not end in `.select()`, so there is no way to tell. |
+
+`no-rows` means the WHERE matched nothing, and the helper cannot tell why. A stale edit is a third cause: if the query also checks a version column (`.eq('version', 5)`) and another client has already moved the row to 6, zero rows come back although the row exists and the caller may read it. That is the right answer, so do not retry without the version filter. Say what fits the screen: "Not saved" is always true, "Someone else changed this, reload" is right when the query carried a version.
 
 Using `.select().single()` for a one-row save? On zero rows PostgREST answers with error `PGRST116` ("The result contains 0 rows"). `wrote()` reports that as `no-rows` too, so the same check works either way.
 
@@ -130,13 +132,13 @@ The same check, without the package:
 # supabase-py returns the changed rows by default
 res = supabase.table("notes").update({"title": title}).eq("id", note_id).execute()
 if not res.data:
-    raise RuntimeError("Nothing was saved: row level security blocked it, or the row does not exist")
+    raise RuntimeError("Nothing was saved: row level security blocked it, the row does not exist, or a filter did not match")
 ```
 
 ```dart
 // supabase_flutter: end with .select() so the changed rows come back
 final rows = await supabase.from('notes').update({'title': title}).eq('id', id).select('id');
-if (rows.isEmpty) throw Exception('Nothing was saved: row level security blocked it, or the row does not exist');
+if (rows.isEmpty) throw Exception('Nothing was saved: row level security blocked it, the row does not exist, or a filter did not match');
 ```
 
 ## Testing your own saves

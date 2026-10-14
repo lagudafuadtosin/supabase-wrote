@@ -5,7 +5,7 @@ export declare class NotSaved extends Error {
   name: 'NotSaved'
   /**
    * error: the database refused it.
-   * no-rows: no row matched, so nothing changed. Row level security blocked it, or the row does not exist.
+   * no-rows: no row matched, so nothing changed. Row level security blocked it, the row does not exist, or another filter in the query did not match, like a version check.
    * unchecked: the query did not end in .select(), so there is no way to tell.
    */
   reason: 'error' | 'no-rows' | 'unchecked'

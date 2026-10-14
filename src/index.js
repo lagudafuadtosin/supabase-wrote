@@ -67,7 +67,7 @@ export function wrote(result, what) {
     return fail(
       new NotSaved(
         'no-rows',
-        `Nothing was saved${label(what)}: no row matched. Row level security blocked it, or the row does not exist.`,
+        `Nothing was saved${label(what)}: no row matched. Row level security blocked it, the row does not exist, or another filter in the query did not match, like a version check.`,
         error,
       ),
     )
@@ -86,7 +86,7 @@ export function wrote(result, what) {
     return fail(
       new NotSaved(
         'no-rows',
-        `Nothing was saved${label(what)}: no row matched. Row level security blocked it, or the row does not exist.`,
+        `Nothing was saved${label(what)}: no row matched. Row level security blocked it, the row does not exist, or another filter in the query did not match, like a version check.`,
       ),
     )
   }
