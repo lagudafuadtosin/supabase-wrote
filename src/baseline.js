@@ -41,13 +41,20 @@ export function readBaseline(path) {
 }
 
 /**
- * Splits the writes found now into the ones the baseline already knows and the
- * new ones, and counts the baseline entries that are no longer there (fixed).
+ * Splits the writes found now into the ones the baseline already knows, the
+ * ones that moved to another file, and the new ones, and counts the baseline
+ * entries that are no longer there (fixed).
+ *
+ * A moved write is a new one whose kind and line of code match a baseline entry
+ * whose file no longer exists, so a renamed file does not fail. A line pasted
+ * into another file while its old file is still there is new, because a fixed
+ * write and an unrelated new one can share the same line of code. A line that
+ * moved and changed is new too, because the query itself is different.
  */
-export function compare(hits, baseline) {
+export function compare(hits, baseline, fileGone = () => false) {
   const left = new Map(baseline)
   const known = []
-  const fresh = []
+  let fresh = []
   for (const h of hits) {
     const k = keyOf(h)
     const n = left.get(k) ?? 0
@@ -56,6 +63,17 @@ export function compare(hits, baseline) {
       known.push(h)
     } else fresh.push(h)
   }
+  const moved = []
+  const paired = new Set()
+  for (const h of fresh) {
+    const from = [...left].find(([k, n]) => n > 0 && k.slice(k.indexOf('|') + 1) === `${h.kind}|${h.code}`
+      && fileGone(k.slice(0, k.indexOf('|'))))
+    if (!from) continue
+    left.set(from[0], from[1] - 1)
+    paired.add(h)
+    moved.push({ ...h, from: from[0].slice(0, from[0].indexOf('|')) })
+  }
+  fresh = fresh.filter((h) => !paired.has(h))
   const fixed = [...left.values()].reduce((a, n) => a + n, 0)
-  return { known, fresh, fixed }
+  return { known, fresh, moved, fixed }
 }

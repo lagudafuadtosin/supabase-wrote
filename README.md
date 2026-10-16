@@ -109,7 +109,7 @@ npx supabase-wrote find . --save-baseline
 git add .supabase-wrote-baseline.json
 ```
 
-From then on `npx supabase-wrote find .` fails only on writes the baseline does not list. Writes are matched by file and line of code, not line number, so code moving up or down does not set it off, and the same line twice counts twice. When you fix one, the run tells you, and `--save-baseline` again drops it. `--no-baseline` lists everything, and `--baseline <file>` keeps the file somewhere else.
+From then on `npx supabase-wrote find .` fails only on writes the baseline does not list. Writes are matched by file and line of code, not line number, so code moving up or down does not set it off, and the same line twice counts twice. A renamed file is reported as moved and does not fail, so a pure rename never goes red before the baseline is saved again. Only writes whose old file is gone count as moved: a line pasted into another file while the old file is still there is new, because a fixed write and an unrelated new one can share the same line of code. A line that moved and changed is new too. When you fix one, the run tells you, and `--save-baseline` again drops it. `--no-baseline` lists everything, and `--baseline <file>` keeps the file somewhere else.
 
 ## 3. Why did it not save? `policies.sql`
 

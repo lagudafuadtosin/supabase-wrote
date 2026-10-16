@@ -2,7 +2,7 @@
 // Asked on r/Supabase, 11 Oct 2026: "new compared to what?"
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, renameSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -82,6 +82,49 @@ test('the same line twice counts twice, and a fixed write is pointed out', () =>
   const r = run(dir)
   assert.equal(r.code, 0)
   assert.match(r.out, /1 in the baseline is fixed now\. Run with --save-baseline to drop it\./)
+})
+
+test('a renamed file is moved, not new, and a moved line that changed is new', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sw-base-'))
+  mkdirSync(join(dir, 'lib'))
+  writeFileSync(join(dir, 'lib', 'notes.js'), two)
+  assert.equal(run(dir, '--save-baseline').code, 0)
+
+  // The whole file renamed: both writes are moved, the run passes and says so.
+  renameSync(join(dir, 'lib', 'notes.js'), join(dir, 'lib', 'records.js'))
+  let r = run(dir)
+  assert.equal(r.code, 0, r.out)
+  assert.match(r.out, /No new unchecked updates or deletes\./)
+  assert.match(r.out, /Moved, not new: lib\/notes\.js -> lib[\\/]records\.js:2\./)
+  assert.match(r.out, /Moved, not new: lib\/notes\.js -> lib[\\/]records\.js:5\./)
+  assert.doesNotMatch(r.out, /fixed now/)
+
+  // Saved again, the new place is the baseline.
+  assert.equal(run(dir, '--save-baseline').code, 0)
+  assert.equal(run(dir).code, 0)
+
+  // Cut to another file and changed on the way: new, and the old one is fixed.
+  writeFileSync(join(dir, 'lib', 'records.js'), two.replace("update({ title })", "update({ title, edited: true })"))
+  r = run(dir)
+  assert.equal(r.code, 1)
+  assert.match(r.out, /1 new write to check\./)
+  assert.match(r.out, /1 in the baseline is fixed now/)
+  assert.doesNotMatch(r.out, /Moved/)
+})
+
+test('a fixed write and the same line added in another file is new, not moved', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sw-base-'))
+  const line = "await supabase.from('notes').delete().eq('id', id)\n"
+  writeFileSync(join(dir, 'a.js'), line)
+  assert.equal(run(dir, '--save-baseline').code, 0)
+
+  // a.js fixed and still there, b.js gets the same unchecked line: it must fail.
+  writeFileSync(join(dir, 'a.js'), "await supabase.from('notes').delete().eq('id', id).select('id')\n")
+  writeFileSync(join(dir, 'b.js'), line)
+  const r = run(dir)
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /^b\.js:1/m)
+  assert.doesNotMatch(r.out, /Moved/)
 })
 
 test('--baseline points at a file somewhere else', () => {
