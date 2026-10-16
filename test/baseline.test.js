@@ -81,7 +81,7 @@ test('the same line twice counts twice, and a fixed write is pointed out', () =>
   writeFileSync(join(dir, 'a.js'), line + "await supabase.from('notes').delete().eq('id', id).select('id')\n")
   const r = run(dir)
   assert.equal(r.code, 0)
-  assert.match(r.out, /1 in the baseline is fixed now\. Run with --save-baseline to drop it\./)
+  assert.match(r.out, /1 in the baseline is fixed now\. Run with --prune-baseline to drop it\./)
 })
 
 test('a renamed file is moved, not new, and a moved line that changed is new', () => {
@@ -125,6 +125,55 @@ test('a fixed write and the same line added in another file is new, not moved', 
   assert.equal(r.code, 1, r.out)
   assert.match(r.out, /^b\.js:1/m)
   assert.doesNotMatch(r.out, /Moved/)
+})
+
+test('a formatter swapping quotes or adding a semicolon is not a new write', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sw-base-'))
+  writeFileSync(join(dir, 'a.js'), "await supabase.from('notes').delete().eq('id', id)\n")
+  assert.equal(run(dir, '--save-baseline').code, 0)
+  writeFileSync(join(dir, 'a.js'), 'await supabase.from("notes").delete().eq("id", id);\n')
+  const r = run(dir)
+  assert.equal(r.code, 0, r.out)
+  assert.match(r.out, /1 already in the baseline/)
+})
+
+test('--prune-baseline drops fixed writes and never adds new ones', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sw-base-'))
+  writeFileSync(join(dir, 'notes.js'), two)
+  assert.equal(run(dir, '--save-baseline').code, 0)
+
+  // Fix the delete, add a new unchecked write elsewhere, then prune.
+  writeFileSync(join(dir, 'notes.js'), two.replace(".delete().eq('id', id)", ".delete().eq('id', id).select('id')"))
+  writeFileSync(join(dir, 'more.js'), "await supabase.from('bids').update({ won: true }).eq('id', id)\n")
+  const r = run(dir, '--prune-baseline')
+  assert.equal(r.code, 1, r.out)
+  assert.match(r.out, /Dropped 1 fixed write/)
+  assert.match(r.out, /^more\.js:1/m)
+  const body = JSON.parse(readFileSync(join(dir, '.supabase-wrote-baseline.json'), 'utf8'))
+  assert.deepEqual(body.writes.map((w) => w.kind), ['update'])
+  assert.match(body.about, /supabase-wrote find/)
+})
+
+test('--prune-baseline keeps a moved write', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sw-base-'))
+  mkdirSync(join(dir, 'lib'))
+  writeFileSync(join(dir, 'lib', 'notes.js'), two)
+  assert.equal(run(dir, '--save-baseline').code, 0)
+  renameSync(join(dir, 'lib', 'notes.js'), join(dir, 'lib', 'records.js'))
+  const r = run(dir, '--prune-baseline')
+  assert.equal(r.code, 0, r.out)
+  assert.match(r.out, /Nothing in the baseline is fixed yet\./)
+  assert.equal(run(dir).code, 0)
+})
+
+test('in GitHub Actions a new write is also an annotation on its line', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sw-base-'))
+  writeFileSync(join(dir, 'a.js'), "await supabase.from('notes').delete().eq('id', id)\n")
+  const r = spawnSync(process.execPath, [bin, 'find', dir], { encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true' } })
+  assert.equal(r.status, 1)
+  assert.match(r.stdout, /^::error file=.*a\.js,line=1,title=supabase-wrote::\.delete\(\)/m)
+  const quiet = spawnSync(process.execPath, [bin, 'find', dir], { encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: '' } })
+  assert.doesNotMatch(quiet.stdout, /::error/)
 })
 
 test('--baseline points at a file somewhere else', () => {
